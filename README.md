@@ -1,3 +1,3 @@
 # smashTag
 Stanford University on-line course
-[img](SmashTag.png)
+![img](SmashTag.png)
