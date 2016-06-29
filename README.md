@@ -1,3 +1,3 @@
 # smashTag
 Stanford University on-line course
-![img](SmashTag.png =100*20)
+<img src = "SmashTag.png" width = "250"></img>
