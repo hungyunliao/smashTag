@@ -12,7 +12,8 @@ import Twitter
 class TweetTableViewController: UITableViewController, UITextFieldDelegate {
     
     // MARK: model
-    var tweets = [Array<Tweet>]() { // an array consists of [Tweet] arrays.
+    var tweets = [Array<Tweet>]() { // an array consists of [Tweet] arrays. Also works: var tweets = [[Tweet]]() ~ tweets[sections][rows]
+        //[(Tweet1, Tweet2), (Tweet3, Tweet4, Tweet5), (Tweet6, Tweet7)]
         didSet {
             tableView.reloadData() // will reload all the data in the UITableViewDataSource section
         }
@@ -22,14 +23,21 @@ class TweetTableViewController: UITableViewController, UITextFieldDelegate {
         didSet {
             tweets.removeAll()
             searchForTweets()
-            title = searchText
+            title = searchText  // set the navigation title
         }
     }
     
     private var tweetsRequest: Twitter.Request? {
-        if let query = searchText where !query.isEmpty {
+        if let query = searchText where !query.isEmpty { // where clause is sort of like "if ... && ...". See the following.
             return Twitter.Request(search: query + " -filter:retweets", count: 100) // -filter:retweets -> do not show the duplicate tweets.
         }
+        
+        // Following also works:
+//        if searchText != nil && !(searchText?.isEmpty)! {
+//            let query = searchText!
+//            return Twitter.Request(search: query + " -filter:retweets", count: 100)
+//        }
+        
         return nil
     }
     
@@ -38,7 +46,7 @@ class TweetTableViewController: UITableViewController, UITextFieldDelegate {
     private func searchForTweets() {
         if let request = tweetsRequest {
             lastTwitterRequest = request
-            request.fetchTweets { [weak weakSelf = self] (newTweets) in // here use weakSelf to not keep it in the heap because the user might navigate to other place while requesting. So in this case, it perfect to get rid of it in the heap.
+            request.fetchTweets { [weak weakSelf = self] (newTweets) in // here use weakSelf to not keep it in the heap because the user might navigate to other place while requesting. So in this case, it's perfect to get rid of it in the heap.
                 dispatch_async(dispatch_get_main_queue()) {
                     if request == weakSelf?.lastTwitterRequest {
                         if !newTweets.isEmpty {
@@ -52,20 +60,20 @@ class TweetTableViewController: UITableViewController, UITextFieldDelegate {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        tableView.estimatedRowHeight = tableView.rowHeight // set to the original value
-        tableView.rowHeight = UITableViewAutomaticDimension
+        tableView.estimatedRowHeight = tableView.rowHeight // set to the original value to improve the performance of creating a table
+        tableView.rowHeight = UITableViewAutomaticDimension // if using automaticDimension, always remember to set the estimatedRowHeight before this statement to improve the performance of creating a table.
         //searchText = "#USC" // To initialize. The flow: "viewDidLoad() -> searchText = '#stanford' -> searchText -> tweets.removeAll() -> searchForTweets() -> modify tweets -> reloadData() -> title = searchText"
     }
 
     // MARK: - UITableViewDataSource
  
     override func numberOfSectionsInTableView(tableView: UITableView) -> Int {
-        // #warning Incomplete implementation, return the number of sections
+        // return the number of sections
         return tweets.count
     }
 
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        // #warning Incomplete implementation, return the number of rows
+        // return the number of rows
         return tweets[section].count
     }
     
@@ -74,23 +82,24 @@ class TweetTableViewController: UITableViewController, UITextFieldDelegate {
     }
 
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCellWithIdentifier(Storyboard.TweetCellIdentifier, forIndexPath: indexPath)
-
+        let cell = tableView.dequeueReusableCellWithIdentifier(Storyboard.TweetCellIdentifier, forIndexPath: indexPath) // get a tableViewCell
+        
         let tweet = tweets[indexPath.section][indexPath.row]
-        if let tweetCell = cell as? TweetTableViewCell {
+        if let tweetCell = cell as? TweetTableViewCell { // if cell != nil and the type is TweetTableViewCell, in this case, it must be.
             tweetCell.tweet = tweet
         }
         
-        return cell
+        return cell // class is passed by reference, so we change tweetCell and then cell is changed too.
     }
     
     @IBOutlet weak var searchTextField: UITextField! {
         didSet {
-            searchTextField.delegate = self
+            searchTextField.delegate = self // if UITextField wants to pass data, pass to me and I can handle it via my implementation of the protocol
             searchTextField.text = searchText
         }
     }
     
+    // MARK: Delegate
     func textFieldShouldReturn(textField: UITextField) -> Bool {
         textField.resignFirstResponder()
         searchText = textField.text
